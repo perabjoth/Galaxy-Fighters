@@ -131,10 +131,20 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
     var state:FSGameState = .FSGameStateStarting
     
     var score = 0
+    var highscore = 0
     var label_score: SKLabelNode!
+    var label_highscore: SKLabelNode!
 
   // MARK: - SKScene Initializacion
   override func didMoveToView(view: SKView) {
+    
+    if((NSUserDefaults.standardUserDefaults().objectForKey("highscore") != nil)){
+        
+        highscore = NSUserDefaults.standardUserDefaults().objectForKey("highscore") as Int
+        
+        
+    }
+    
     backGroundMusic = AVAudioPlayer(contentsOfURL:bgMusicUrl, error: nil)
     backGroundMusic.numberOfLoops = (-1)
     backGroundMusic.prepareToPlay()
@@ -248,9 +258,19 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
         enemy.physicsBody?.mass = 0.225
         enemy.physicsBody?.velocity.dy = CGFloat(-100.0)
         enemy.physicsBody?.allowsRotation = false
+        
+        
+        
         enemy.zPosition = 30
         return enemy
     }
+    func startMoving(velocityMultiplier: CGFloat) {
+        
+    }
+    
+    
+    
+    
     
     func getMissile() ->SKSpriteNode{
         let missile = SKSpriteNode(imageNamed: "missile")
@@ -281,6 +301,16 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
   func gameOver() {
     state = .FSGameStateEnded
     
+        if(score > highscore){
+            highscore = score
+            NSUserDefaults.standardUserDefaults().setObject(score, forKey: "highscore")
+            NSUserDefaults.standardUserDefaults().synchronize()
+
+        }else{
+            NSUserDefaults.standardUserDefaults().setObject(highscore, forKey: "highscore")
+            NSUserDefaults.standardUserDefaults().synchronize()
+        }
+    
     // 2
     backGroundMusic.pause()
     hits  = 0
@@ -294,6 +324,9 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
     restart = SKSpriteNode(imageNamed: "Restart")
     restart.position = CGPoint(x: CGRectGetMidX(frame), y: CGRectGetMidY(frame))
     restart.zPosition = 70
+    initHighscore()
+  
+   
     addChild(restart)
     
     // 3
@@ -363,6 +396,19 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
         resume.removeFromParent()
         
     }
+    
+    func initHighscore(){
+        label_highscore = SKLabelNode(fontNamed:"Copperplate")
+        label_highscore.fontSize = 20
+        label_highscore.position.x = screenSize.width/2
+        label_highscore.position.y = screenSize.height - 30
+        label_highscore.text = "Highscore: \(highscore)"
+        label_highscore.zPosition = 50
+        addChild(label_highscore)
+    }
+    
+    
+    
     
     func resumeGame(){
         self.scene?.paused = false
@@ -535,6 +581,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
     
     if state == .FSGameStateEnded && restart.containsPoint(touchLocation)
     {
+        label_highscore.text = ""
         label_score.removeFromParent()
         restart.removeFromParent()
         self.restartGame()
