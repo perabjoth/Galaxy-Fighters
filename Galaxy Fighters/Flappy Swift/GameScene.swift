@@ -53,7 +53,19 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
     var lastTouch: CGPoint? = nil
     let screenSize: CGRect = UIScreen.mainScreen().bounds
     var enemy_x: CGFloat = 0.0
-    var start: SKSpriteNode!
+   
+    
+    //difficulty
+    var easy: SKSpriteNode!
+    var medium: SKSpriteNode!
+    var hard: SKSpriteNode!
+    
+    
+    var missileNumber = Double()
+    var enemyNumber = Double()
+    
+    
+    
     var options: SKSpriteNode!
     var restart: SKSpriteNode!
     var soundON: SKSpriteNode!
@@ -62,7 +74,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
     var resume: SKSpriteNode!
     // Background
     var background: SKNode!
-    let background_speed = 100.0
+    var background_speed = 100.0
     var hits = 0
     // Time Values
     var delta = NSTimeInterval(0)
@@ -85,6 +97,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
     var placeHolderView:UIView!
     var interstitialAdView: UIView = UIView()
     var num = 0.0
+    var dead = false
     func interstitialAdDidUnload(interstitialAd: ADInterstitialAd!) {
         interstitialAdView.removeFromSuperview()
     }
@@ -144,7 +157,6 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
         
         
     }
-    
     backGroundMusic = AVAudioPlayer(contentsOfURL:bgMusicUrl, error: nil)
     backGroundMusic.numberOfLoops = (-1)
     backGroundMusic.prepareToPlay()
@@ -170,7 +182,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
         interstitialAd = ADInterstitialAd()
         interstitialAd.delegate = self
     }
-    
+    let blink = SKAction.sequence([SKAction.fadeOutWithDuration(0.2), SKAction.fadeInWithDuration(0.2)])
     
   // MARK: - Init spaceship
   func initSpaceship() {
@@ -188,7 +200,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
     spaceship.physicsBody?.mass = 0.225
     spaceship.zPosition = 50
     addChild(spaceship)
-    runAction(SKAction.repeatActionForever(SKAction.sequence([SKAction.waitForDuration(0.5), SKAction.runBlock { self.runGame()}])), withKey: "generator")
+    runAction(SKAction.repeatActionForever(SKAction.sequence([SKAction.waitForDuration(missileNumber), SKAction.runBlock { self.initMissile()}])), withKey: "generator")
+    runAction(SKAction.repeatActionForever(SKAction.sequence([SKAction.waitForDuration(enemyNumber), SKAction.runBlock { self.initEnemy()}])), withKey: "generator1")
     heart1 = SKSpriteNode(imageNamed: "heart")
     heart1.position = CGPoint(x: heart1.size.width/2 , y: screenSize.height - heart1.size.height/2)
     heart1.zPosition = 70
@@ -243,13 +256,13 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
   }
     func getEnemy() -> SKSpriteNode {
         let enemy =  SKSpriteNode(imageNamed: "enemy")
-        var value = cos(CGFloat(num/M_PI))
-            if value <= 0{
-                value = 0 - value
-            }
-        enemy.position.x = CGFloat((screenSize.width - enemy.size.width)*value + enemy.size.width/2)
-        num++
-        //enemy.position.x = CGFloat(arc4random_uniform(UInt32(screenSize.width - enemy.size.width)))
+//        var value = cos(CGFloat(num/M_PI))
+//            if value <= 0{
+//                value = 0 - value
+//            }
+//        enemy.position.x = CGFloat((screenSize.width - enemy.size.width)*value + enemy.size.width/2)
+//        num++
+        enemy.position.x = CGFloat(arc4random_uniform(UInt32(screenSize.width - enemy.size.width)))
         enemy.position.y = CGFloat(UInt32(screenSize.height)) - enemy.size.height/2
         enemy.physicsBody = SKPhysicsBody(rectangleOfSize: enemy.size)
         enemy.physicsBody?.categoryBitMask = FSPipeCategory;
@@ -281,7 +294,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
         missile.physicsBody?.contactTestBitMask = FSPipeCategory
         missile.physicsBody?.collisionBitMask = FSPipeCategory
         missile.physicsBody?.mass = 1.0
-        missile.physicsBody?.velocity.dy = CGFloat(200.0)
+        missile.physicsBody?.velocity.dy = CGFloat(300.0)
         missile.physicsBody?.allowsRotation = false
         missile.zPosition = 30
         return missile
@@ -293,9 +306,33 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
     }
   // MARK: - Pipes Functions
   func initEnemy() {
-    let enemy = getEnemy()
-    addChild(enemy)
-  }
+    
+    
+//       if(difficulty == "easy"){
+//          for count in 0..<3{
+//              let count = getEnemy()
+//              addChild(count)
+//          }
+//        
+//        }
+//        else if(difficulty == "medium"){
+//           for count in 0..<6{
+//            let count = getEnemy()
+//            addChild(count)
+//           }
+//        
+//        }else if(difficulty == "hard"){
+//            for count in 0..<8{
+//                let count = getEnemy()
+//                addChild(count)
+//            }
+//        
+//        }
+    addChild(getEnemy())
+    
+    }
+
+
     
   // MARK: - Game Over helpers
   func gameOver() {
@@ -317,6 +354,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
     spaceship.physicsBody?.categoryBitMask = 0
     spaceship.physicsBody?.collisionBitMask = FSBoundaryCategory
     removeActionForKey("generator")
+        removeActionForKey("generator1")
     spaceship.removeAllChildren()
     spaceship.removeFromParent()
     removeAllChildren()
@@ -355,13 +393,28 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
         addChild(label_score)
         
         // 2
-        start = SKSpriteNode(imageNamed: "Start")
-        start.position = CGPoint(x: CGRectGetMidX(frame), y: CGRectGetMidY(frame)  + start.size.height + 10)
-        start.zPosition = 70
-        addChild(start)
         
+        //easy game
+        easy = SKSpriteNode(imageNamed: "Easy")
+        easy.position = CGPoint(x: CGRectGetMidX(frame), y: CGRectGetMidY(frame)  + easy.size.height + 10)
+        easy.zPosition = 70
+        addChild(easy)
+        
+        //medium game
+        medium = SKSpriteNode(imageNamed: "Medium")
+        medium.position = CGPoint(x: CGRectGetMidX(frame), y: CGRectGetMidY(frame)  + medium.size.height - 40)
+        medium.zPosition = 70
+        addChild(medium)
+        
+        
+        //hard gamef
+        hard = SKSpriteNode(imageNamed: "Hard")
+        hard.position = CGPoint(x: CGRectGetMidX(frame), y: CGRectGetMidY(frame)  + hard.size.height - 90)
+        hard.zPosition = 70
+        addChild(hard)
+    
         options = SKSpriteNode(imageNamed: "Options")
-        options.position = CGPoint(x: CGRectGetMidX(frame), y: CGRectGetMidY(frame) )
+        options.position = CGPoint(x: CGRectGetMidX(frame), y: CGRectGetMidY(frame) - 100 )
         options.zPosition = 70
         addChild(options)
         
@@ -437,10 +490,14 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
     }
     
     // 2
-    if collision == (FSPlayerCategory | FSPipeCategory) {
+    if collision == (FSPlayerCategory | FSPipeCategory) && !dead{
         hits = hits + 1
+        dead = true
         effectsPlayer = AVAudioPlayer(contentsOfURL:ow, error: nil)
         effectsPlayer.prepareToPlay()
+        let delayTime1 = dispatch_time(DISPATCH_TIME_NOW,Int64(3.0 * Double(NSEC_PER_SEC)))
+        runAction(SKAction.repeatActionForever(SKAction.sequence([SKAction.waitForDuration(0.4), SKAction.runBlock { self.spaceship.runAction(self.blink)}])), withKey: "blink")
+        dispatch_after(delayTime1 , dispatch_get_main_queue(), {self.revive()})
         if volume{
             effectsPlayer.play()
         }
@@ -478,7 +535,10 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
     }
     
 }
-    
+    func revive(){
+        dead = false
+        removeActionForKey("blink")
+    }
     // Be sure to clear lastTouch when touches end so that the impulses stop being applies
     override func touchesEnded(touches: NSSet, withEvent event: UIEvent) {
         lastTouch = nil
@@ -488,17 +548,65 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
   override func touchesBegan(touches: NSSet, withEvent event: UIEvent) {
     let touch = touches.anyObject() as UITouch
     let touchLocation = touch.locationInNode(self)
-    if state == .FSGameStateStarting && start.containsPoint(touchLocation){
+    
+    
+    //difficulty easy
+    if state == .FSGameStateStarting && easy.containsPoint(touchLocation){
         state = .FSGameStatePlaying
         backGroundMusic.play()
-   
+        missileNumber = 0.1
+        enemyNumber = 0.5
+        
+        
+       
     lastTouch = touchLocation
         pause.hidden = false
         addChild(pause)
-        start.hidden = true
+        easy.hidden = true
+        medium.hidden = true
+        hard.hidden = true
         options.hidden = true
         initSpaceship()
     }
+        //difficulty medium
+    if state == .FSGameStateStarting && medium.containsPoint(touchLocation){
+        state = .FSGameStatePlaying
+        backGroundMusic.play()
+        missileNumber = 0.1
+        enemyNumber = 0.3
+        
+        lastTouch = touchLocation
+        pause.hidden = false
+        addChild(pause)
+        easy.hidden = true
+        medium.hidden = true
+        hard.hidden = true
+        options.hidden = true
+        initSpaceship()
+    }
+    //difficulty hard
+    if state == .FSGameStateStarting && hard.containsPoint(touchLocation){
+        state = .FSGameStatePlaying
+        backGroundMusic.play()
+        missileNumber = 0.1
+        enemyNumber = 0.05
+        
+        lastTouch = touchLocation
+        pause.hidden = false
+        addChild(pause)
+        easy.hidden = true
+        medium.hidden = true
+        hard.hidden = true
+        options.hidden = true
+        initSpaceship()
+    }
+    
+    
+    
+    
+    
+    
+    
     
     if state == .FSGameStatePlaying && pause.containsPoint(touchLocation){
         state = .FSGameStatePaused
@@ -534,7 +642,9 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
         
     }
     if state == .FSGameStateStarting && options.containsPoint(touchLocation){
-        start.removeFromParent()
+        easy.removeFromParent()
+        medium.removeFromParent()
+        hard.removeFromParent()
         options.removeFromParent()
         close.hidden = false
         addChild(close)
@@ -556,7 +666,9 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
         soundOFF.removeFromParent()
         soundON.hidden = true
         soundON.removeFromParent()
-        addChild(start)
+        addChild(easy)
+        addChild(medium)
+        addChild(hard)
         addChild(options)
     }
     if (state == .FSGameStateSetting || state == .FSGameStatePaused) && soundOFF.containsPoint(touchLocation){
@@ -590,16 +702,34 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
     func runGame(){
         initMissile()
         initEnemy()
+
     }
     override func touchesMoved(touches: NSSet, withEvent event: UIEvent) {
         let touch = touches.anyObject() as UITouch
         let touchLocation = touch.locationInNode(self)
         lastTouch = touchLocation
     }
+    func disappear(){
+        spaceship.hidden = true
+    }
+    func appear(){
+        spaceship.hidden = false
+    }
   // MARK: - Frames Per Second
   override func update(currentTime: CFTimeInterval) {
     // 6
+
+        var delayTime1 = dispatch_time(DISPATCH_TIME_NOW,Int64(0.5 * Double(NSEC_PER_SEC)))
     
+//    if dead{
+//        //var x = 0.0
+//    for x in 0..<3 {
+//        delayTime1 = dispatch_time(DISPATCH_TIME_NOW,Int64(Double(x) * Double(NSEC_PER_SEC)))
+//        dispatch_after(delayTime1 , dispatch_get_main_queue(), {self.disappear()})
+//        delayTime1 = dispatch_time(DISPATCH_TIME_NOW,Int64((Double(x)+0.5) * Double(NSEC_PER_SEC)))
+//       dispatch_after(delayTime1 , dispatch_get_main_queue(), {self.appear()})
+//    }
+//    }
     let max_speed = CGFloat(0.5)
     if state == .FSGameStatePlaying{
     if spaceship.physicsBody?.velocity.dx > max_speed{
