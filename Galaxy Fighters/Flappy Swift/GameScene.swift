@@ -153,7 +153,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
     
     if((NSUserDefaults.standardUserDefaults().objectForKey("highscore") != nil)){
         
-        highscore = NSUserDefaults.standardUserDefaults().objectForKey("highscore") as Int
+        highscore = NSUserDefaults.standardUserDefaults().objectForKey("highscore") as! Int
         
         
     }
@@ -540,13 +540,13 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
         removeActionForKey("blink")
     }
     // Be sure to clear lastTouch when touches end so that the impulses stop being applies
-    override func touchesEnded(touches: NSSet, withEvent event: UIEvent) {
+    override func touchesEnded(touches: Set<NSObject>, withEvent event: UIEvent) {
         lastTouch = nil
     }
     
   // MARK: - Touch Events
-  override func touchesBegan(touches: NSSet, withEvent event: UIEvent) {
-    let touch = touches.anyObject() as UITouch
+  override func touchesBegan(touches: Set<NSObject>, withEvent event: UIEvent) {
+    if let touch = touches.first as? UITouch{
     let touchLocation = touch.locationInNode(self)
     
     
@@ -698,16 +698,18 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
         restart.removeFromParent()
         self.restartGame()
     }
+    }
   }
     func runGame(){
         initMissile()
         initEnemy()
 
     }
-    override func touchesMoved(touches: NSSet, withEvent event: UIEvent) {
-        let touch = touches.anyObject() as UITouch
+    override func touchesMoved(touches: Set<NSObject>, withEvent event: UIEvent) {
+        if let touch = touches.first as? UITouch{
         let touchLocation = touch.locationInNode(self)
         lastTouch = touchLocation
+        }
     }
     func disappear(){
         spaceship.hidden = true
