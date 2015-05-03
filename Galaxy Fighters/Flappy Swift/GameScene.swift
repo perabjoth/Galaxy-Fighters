@@ -53,7 +53,10 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
     var lastTouch: CGPoint? = nil
     let screenSize: CGRect = UIScreen.mainScreen().bounds
     var enemy_x: CGFloat = 0.0
-   
+    
+    var currentLevel = 1
+    var bossHealth = 0
+    var bossTime = 0
     
     //difficulty
     var easy: SKSpriteNode!
@@ -89,6 +92,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
     let FSPlayerCategory: UInt32   = 1 << 1
     let FSPipeCategory: UInt32     = 1 << 2
     let FSGapCategory: UInt32      = 1 << 3
+    let FSBossCategory: UInt32     = 1 << 4
+    
     var heart1: SKSpriteNode!
     var heart2: SKSpriteNode!
     var heart3: SKSpriteNode!
@@ -147,6 +152,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
     var highscore = 0
     var label_score: SKLabelNode!
     var label_highscore: SKLabelNode!
+    var label_bossHealth: SKLabelNode!
 
   // MARK: - SKScene Initializacion
   override func didMoveToView(view: SKView) {
@@ -291,7 +297,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
         missile.position.y = spaceship.position.y
         missile.physicsBody = SKPhysicsBody( rectangleOfSize: missile.size)
         missile.physicsBody?.categoryBitMask = FSGapCategory
-        missile.physicsBody?.contactTestBitMask = FSPipeCategory
+        missile.physicsBody?.contactTestBitMask = FSPipeCategory | FSBossCategory
         missile.physicsBody?.collisionBitMask = FSPipeCategory
         missile.physicsBody?.mass = 1.0
         missile.physicsBody?.velocity.dy = CGFloat(300.0)
@@ -354,7 +360,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
     spaceship.physicsBody?.categoryBitMask = 0
     spaceship.physicsBody?.collisionBitMask = FSBoundaryCategory
     removeActionForKey("generator")
-        removeActionForKey("generator1")
+    removeActionForKey("generator1")
     spaceship.removeAllChildren()
     spaceship.removeFromParent()
     removeAllChildren()
@@ -469,16 +475,49 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
     func pauseGame(){
         self.scene?.paused = true
     }
+    
+    func initBoss() {
+        let boss =  SKSpriteNode(imageNamed: "enemy")
+        boss.position.x = CGFloat(arc4random_uniform(UInt32(screenSize.width - boss.size.width)))
+        boss.position.y = CGFloat(UInt32(screenSize.height)) - boss.size.height*2
+        boss.physicsBody = SKPhysicsBody(rectangleOfSize: boss.size)
+        boss.physicsBody?.categoryBitMask = FSBossCategory;
+        boss.physicsBody?.contactTestBitMask = FSBoundaryCategory;
+        boss.physicsBody?.collisionBitMask = FSBoundaryCategory;
+        boss.physicsBody?.mass = 0.225
+        boss.physicsBody?.velocity.dx = CGFloat(-100.0)
+        boss.physicsBody?.allowsRotation = false
+        
+        bossHealth = currentLevel*15
+        
+        boss.zPosition = 30
+        addChild(boss)
+        
+        label_bossHealth = SKLabelNode(fontNamed:"Copperplate")
+        label_bossHealth.fontSize = 20
+        label_bossHealth.position.x = screenSize.width - 50
+        label_bossHealth.position.y = screenSize.height - 40
+        label_bossHealth.text = "Boss: \(bossHealth)"
+        label_bossHealth.zPosition = 50
+        addChild(label_bossHealth)
+    }
+    
   // MARK: - SKPhysicsContactDelegate
   func didBeginContact(contact: SKPhysicsContact) {
     let firstBody = contact.bodyA
     let secondBody = contact.bodyB
     let collision:UInt32 = (firstBody.categoryBitMask | secondBody.categoryBitMask)
     
-    // 1
+    // collision between enemy and missile
     if collision == (FSPipeCategory | FSGapCategory) {
         score++
         label_score.text = "Score: \(score)"
+        
+        if score > currentLevel*75 && bossTime != 1{
+            bossTime = 1
+            removeActionForKey("generator1")
+            initBoss()
+        }
         
         firstBody.node?.removeFromParent()
         secondBody.node?.removeFromParent()
@@ -489,7 +528,27 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
         }
     }
     
-    // 2
+    // collision between boss and edge
+    if collision == (FSBossCategory | FSBoundaryCategory) {
+        var bounceImpulse = secondBody.velocity.dx * -1
+        secondBody.velocity.dx = bounceImpulse
+    }
+    
+    // collision between boss and missile
+    if collision == (FSBossCategory | FSGapCategory) {
+        bossHealth--
+        if bossHealth > 0{
+            label_bossHealth.text = "Boss: \(bossHealth)"
+        } else {
+            label_bossHealth.removeFromParent()
+            currentLevel++
+            bossTime = 0
+            firstBody.node?.removeFromParent()
+            runAction(SKAction.repeatActionForever(SKAction.sequence([SKAction.waitForDuration(enemyNumber), SKAction.runBlock { self.initEnemy()}])), withKey: "generator1")
+        }
+    }
+    
+    // collision between player and enemy
     if collision == (FSPlayerCategory | FSPipeCategory) && !dead{
         hits = hits + 1
         dead = true
@@ -531,7 +590,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
     if collision == (FSPipeCategory | FSBoundaryCategory)
     {
         firstBody.node?.removeFromParent()
-        secondBody.node?.removeFromParent()
+        
     }
     
 }
