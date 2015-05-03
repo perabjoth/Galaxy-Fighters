@@ -477,14 +477,14 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
     }
     
     func initBoss() {
-        let boss =  SKSpriteNode(imageNamed: "enemy")
+        let boss =  SKSpriteNode(imageNamed: "boss")
         boss.position.x = CGFloat(arc4random_uniform(UInt32(screenSize.width - boss.size.width)))
         boss.position.y = CGFloat(UInt32(screenSize.height)) - boss.size.height*2
         boss.physicsBody = SKPhysicsBody(rectangleOfSize: boss.size)
         boss.physicsBody?.categoryBitMask = FSBossCategory;
         boss.physicsBody?.contactTestBitMask = FSBoundaryCategory;
         boss.physicsBody?.collisionBitMask = FSBoundaryCategory;
-        boss.physicsBody?.mass = 0.225
+        boss.physicsBody?.mass = 0.5
         boss.physicsBody?.velocity.dx = CGFloat(-100.0)
         boss.physicsBody?.allowsRotation = false
         
@@ -530,8 +530,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
     
     // collision between boss and edge
     if collision == (FSBossCategory | FSBoundaryCategory) {
-        var bounceImpulse = secondBody.velocity.dx * -1
-        secondBody.velocity.dx = bounceImpulse
+        var checkMass = firstBody.mass
+        checkMass == CGFloat(0.5) ? firstBody.applyImpulse(CGVector(dx: ((firstBody.velocity.dx) * CGFloat(-2.0)), dy: 0)) : secondBody.applyImpulse(CGVector(dx: ((secondBody.velocity.dx) * CGFloat(-2.0)), dy: 0))
     }
     
     // collision between boss and missile
@@ -543,7 +543,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
             label_bossHealth.removeFromParent()
             currentLevel++
             bossTime = 0
-            firstBody.node?.removeFromParent()
+            var checkMass = firstBody.mass
+            checkMass == CGFloat(0.5) ? firstBody.node?.removeFromParent() : secondBody.node?.removeFromParent()
             runAction(SKAction.repeatActionForever(SKAction.sequence([SKAction.waitForDuration(enemyNumber), SKAction.runBlock { self.initEnemy()}])), withKey: "generator1")
         }
     }
