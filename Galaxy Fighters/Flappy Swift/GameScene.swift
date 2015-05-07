@@ -50,6 +50,7 @@ extension Float {
 public var backGroundMusic = AVAudioPlayer()
 class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
     var spaceship: SKSpriteNode!
+    var boss: SKSpriteNode!
     var lastTouch: CGPoint? = nil
     let screenSize: CGRect = UIScreen.mainScreen().bounds
     var enemy_x: CGFloat = 0.0
@@ -84,6 +85,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
     var last_update_time = NSTimeInterval(0)
     var pause: SKSpriteNode!
     var effectsPlayer = AVAudioPlayer()
+    var bossLaugh:NSURL = NSBundle.mainBundle().URLForResource("laugh", withExtension: "mp3")!
     var bgMusicUrl:NSURL = NSBundle.mainBundle().URLForResource("Reformat", withExtension: "mp3")!
     var laser:NSURL = NSBundle.mainBundle().URLForResource("laser", withExtension: "wav")!
     var ow:NSURL = NSBundle.mainBundle().URLForResource("ow", withExtension: "wav")!
@@ -195,12 +197,13 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
     // 1
     spaceship = SKSpriteNode(imageNamed: "Spaceship1")
     // 2
+    spaceship.name = "spaceship"
     spaceship.position = CGPoint(x: screenSize.width/2 , y: 0.0)
     // 3
     spaceship.physicsBody = SKPhysicsBody(circleOfRadius: spaceship.size.width / 2)
     spaceship.physicsBody?.categoryBitMask = FSPlayerCategory
-    spaceship.physicsBody?.contactTestBitMask = FSPipeCategory | FSGapCategory | FSBoundaryCategory
-    spaceship.physicsBody?.collisionBitMask = FSPipeCategory | FSBoundaryCategory
+    spaceship.physicsBody?.contactTestBitMask = FSPipeCategory | FSGapCategory | FSBoundaryCategory | FSBossCategory
+    spaceship.physicsBody?.collisionBitMask = FSPipeCategory | FSBoundaryCategory | FSBossCategory
     spaceship.physicsBody?.allowsRotation = false
     spaceship.physicsBody?.restitution = 0.0
     spaceship.physicsBody?.mass = 0.225
@@ -260,8 +263,37 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
     }
 
   }
+    func initBoss() {
+        boss =  SKSpriteNode(imageNamed: "boss")
+        boss.name = "boss"
+        boss.position.x = CGFloat(screenSize.width/2)
+        boss.position.y = CGFloat(screenSize.height/2 + boss.size.height/2)
+        boss.physicsBody = SKPhysicsBody(circleOfRadius: boss.size.height/2)
+        boss.physicsBody?.categoryBitMask = FSBossCategory;
+        boss.physicsBody?.contactTestBitMask = FSBoundaryCategory | FSPlayerCategory;
+        boss.physicsBody?.collisionBitMask = FSBoundaryCategory | FSGapCategory | FSPlayerCategory;
+        boss.physicsBody?.mass = 100
+
+        boss.physicsBody?.allowsRotation = false
+        
+        bossHealth = currentLevel*50
+        
+        boss.zPosition = 30
+        addChild(boss)
+        
+        label_bossHealth = SKLabelNode(fontNamed:"Copperplate")
+        label_bossHealth.fontSize = 20
+        label_bossHealth.position.x = screenSize.width - 50
+        label_bossHealth.position.y = screenSize.height - 40
+        label_bossHealth.text = "Boss: \(bossHealth)"
+        label_bossHealth.zPosition = 50
+        
+
+        addChild(label_bossHealth)
+    }
     func getEnemy() -> SKSpriteNode {
         let enemy =  SKSpriteNode(imageNamed: "enemy")
+        enemy.name = "enemy"
 //        var value = cos(CGFloat(num/M_PI))
 //            if value <= 0{
 //                value = 0 - value
@@ -293,12 +325,13 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
     
     func getMissile() ->SKSpriteNode{
         let missile = SKSpriteNode(imageNamed: "missile")
+        missile.name = "missile"
         missile.position.x = spaceship.position.x
         missile.position.y = spaceship.position.y
         missile.physicsBody = SKPhysicsBody( rectangleOfSize: missile.size)
         missile.physicsBody?.categoryBitMask = FSGapCategory
         missile.physicsBody?.contactTestBitMask = FSPipeCategory | FSBossCategory
-        missile.physicsBody?.collisionBitMask = FSPipeCategory
+        missile.physicsBody?.collisionBitMask = FSPipeCategory | FSBossCategory
         missile.physicsBody?.mass = 1.0
         missile.physicsBody?.velocity.dy = CGFloat(300.0)
         missile.physicsBody?.allowsRotation = false
@@ -476,31 +509,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
         self.scene?.paused = true
     }
     
-    func initBoss() {
-        let boss =  SKSpriteNode(imageNamed: "boss")
-        boss.position.x = CGFloat(arc4random_uniform(UInt32(screenSize.width - boss.size.width)))
-        boss.position.y = CGFloat(UInt32(screenSize.height)) - boss.size.height*2
-        boss.physicsBody = SKPhysicsBody(rectangleOfSize: boss.size)
-        boss.physicsBody?.categoryBitMask = FSBossCategory;
-        boss.physicsBody?.contactTestBitMask = FSBoundaryCategory;
-        boss.physicsBody?.collisionBitMask = FSBoundaryCategory;
-        boss.physicsBody?.mass = 0.5
-        boss.physicsBody?.velocity.dx = CGFloat(-100.0)
-        boss.physicsBody?.allowsRotation = false
-        
-        bossHealth = currentLevel*15
-        
-        boss.zPosition = 30
-        addChild(boss)
-        
-        label_bossHealth = SKLabelNode(fontNamed:"Copperplate")
-        label_bossHealth.fontSize = 20
-        label_bossHealth.position.x = screenSize.width - 50
-        label_bossHealth.position.y = screenSize.height - 40
-        label_bossHealth.text = "Boss: \(bossHealth)"
-        label_bossHealth.zPosition = 50
-        addChild(label_bossHealth)
-    }
+  
     
   // MARK: - SKPhysicsContactDelegate
   func didBeginContact(contact: SKPhysicsContact) {
@@ -517,6 +526,11 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
             bossTime = 1
             removeActionForKey("generator1")
             initBoss()
+            self.enumerateChildNodesWithName("enemy") {
+                node, stop in
+                node.removeFromParent();
+            }
+            
         }
         
         firstBody.node?.removeFromParent()
@@ -530,26 +544,80 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
     
     // collision between boss and edge
     if collision == (FSBossCategory | FSBoundaryCategory) {
-        var checkMass = firstBody.mass
-        checkMass == CGFloat(0.5) ? firstBody.applyImpulse(CGVector(dx: ((firstBody.velocity.dx) * CGFloat(-2.0)), dy: 0)) : secondBody.applyImpulse(CGVector(dx: ((secondBody.velocity.dx) * CGFloat(-2.0)), dy: 0))
+        if firstBody.node?.name == "spaceship"{
+            firstBody.applyImpulse(CGVector(dx: ((firstBody.velocity.dx) * CGFloat(-2.0)), dy: 0)) }
+        if secondBody.node?.name == "spaceship"{
+            secondBody.applyImpulse(CGVector(dx: ((secondBody.velocity.dx) * CGFloat(-2.0)), dy: 0))}
+       
     }
     
     // collision between boss and missile
     if collision == (FSBossCategory | FSGapCategory) {
+        if firstBody.node?.name == "missile"
+        {
+            firstBody.node?.removeFromParent()
+        }
+        if secondBody.node?.name == "missile"
+        {
+            secondBody.node?.removeFromParent()
+        }
         bossHealth--
         if bossHealth > 0{
+
             label_bossHealth.text = "Boss: \(bossHealth)"
         } else {
             label_bossHealth.removeFromParent()
             currentLevel++
             bossTime = 0
-            var checkMass = firstBody.mass
-            checkMass == CGFloat(0.5) ? firstBody.node?.removeFromParent() : secondBody.node?.removeFromParent()
+            if firstBody.node?.name == "boss"{
+                firstBody.node?.removeFromParent()}
+            if secondBody.node?.name == "boss"{
+                secondBody.node?.removeFromParent()}
             runAction(SKAction.repeatActionForever(SKAction.sequence([SKAction.waitForDuration(enemyNumber), SKAction.runBlock { self.initEnemy()}])), withKey: "generator1")
         }
     }
     
     // collision between player and enemy
+    if collision == (FSPlayerCategory | FSBossCategory) && !dead{
+        hits = hits + 1
+        dead = true
+        effectsPlayer = AVAudioPlayer(contentsOfURL:ow, error: nil)
+        effectsPlayer.prepareToPlay()
+        let delayTime1 = dispatch_time(DISPATCH_TIME_NOW,Int64(3.0 * Double(NSEC_PER_SEC)))
+        runAction(SKAction.repeatActionForever(SKAction.sequence([SKAction.waitForDuration(0.4), SKAction.runBlock { self.spaceship.runAction(self.blink)}])), withKey: "blink")
+        dispatch_after(delayTime1 , dispatch_get_main_queue(), {self.revive()})
+        if volume{
+            effectsPlayer.play()
+        }
+        if hits <= 3{
+            if hits == 1{
+                heart3.removeFromParent()
+                if firstBody.node?.name == "spaceship"{
+                    firstBody.node?.removeFromParent()}
+                if secondBody.node?.name == "spaceship"{
+                    secondBody.node?.removeFromParent()}
+                spaceship.position = CGPoint(x: screenSize.width/2 , y: 0.0)
+                let delayTime = dispatch_time(DISPATCH_TIME_NOW,Int64(0.35 * Double(NSEC_PER_SEC)))
+                dispatch_after(delayTime , dispatch_get_main_queue(), {self.addChild(self.spaceship)})
+                
+            }
+            if hits == 2{
+                heart2.removeFromParent()
+                if firstBody.node?.name == "spaceship"{
+                    firstBody.node?.removeFromParent()}
+                if secondBody.node?.name == "spaceship"{
+                    secondBody.node?.removeFromParent()}
+                spaceship.position = CGPoint(x: screenSize.width/2 , y: 0.0)
+                let delayTime = dispatch_time(DISPATCH_TIME_NOW,Int64(0.35 * Double(NSEC_PER_SEC)))
+                dispatch_after(delayTime , dispatch_get_main_queue(), {self.addChild(self.spaceship)})
+            }
+            if hits == 3{
+                heart3.removeFromParent()
+                gameOver()
+            }
+        }
+        
+    }
     if collision == (FSPlayerCategory | FSPipeCategory) && !dead{
         hits = hits + 1
         dead = true
@@ -587,7 +655,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
         }
         
     }
-    
+
     if collision == (FSPipeCategory | FSBoundaryCategory)
     {
         firstBody.node?.removeFromParent()
@@ -798,6 +866,12 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
     if spaceship.physicsBody?.velocity.dy > max_speed{
         spaceship.physicsBody?.velocity.dy = max_speed
     }
+        if let potato = boss{
+        if boss?.position.x != spaceship?.position.x && boss?.position.y != spaceship?.position.y{
+            let impulseVector = CGVector(dx:  (spaceship.position.x - boss.position.x)*2 , dy:  (spaceship.position.y - boss.position.y)*2 )
+            boss?.physicsBody?.applyImpulse(impulseVector)
+        }
+        }
 //    if spaceship.position.x == lastTouch?.x && spaceship.position.y == lastTouch?.y{
 //        spaceship.physicsBody?.velocity = CGVector(dx: 0.0, dy: 0.0)
 //    }
