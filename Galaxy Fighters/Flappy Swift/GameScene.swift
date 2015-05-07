@@ -85,7 +85,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
     var last_update_time = NSTimeInterval(0)
     var pause: SKSpriteNode!
     var effectsPlayer = AVAudioPlayer()
-    var bossLaugh:NSURL = NSBundle.mainBundle().URLForResource("laugh", withExtension: "mp3")!
+    //var bossLaugh:NSURL = NSBundle.mainBundle().URLForResource("laugh", withExtension: "mp3")!
     var bgMusicUrl:NSURL = NSBundle.mainBundle().URLForResource("Reformat", withExtension: "mp3")!
     var laser:NSURL = NSBundle.mainBundle().URLForResource("laser", withExtension: "wav")!
     var ow:NSURL = NSBundle.mainBundle().URLForResource("ow", withExtension: "wav")!
@@ -376,7 +376,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
   // MARK: - Game Over helpers
   func gameOver() {
     state = .FSGameStateEnded
-    
+    bossTime = 0
         if(score > highscore){
             highscore = score
             NSUserDefaults.standardUserDefaults().setObject(score, forKey: "highscore")
@@ -682,8 +682,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
     if state == .FSGameStateStarting && easy.containsPoint(touchLocation){
         state = .FSGameStatePlaying
         backGroundMusic.play()
-        missileNumber = 0.1
-        enemyNumber = 0.5
+        missileNumber = 0.2
+        enemyNumber = 0.6
         
         
        
@@ -700,7 +700,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
     if state == .FSGameStateStarting && medium.containsPoint(touchLocation){
         state = .FSGameStatePlaying
         backGroundMusic.play()
-        missileNumber = 0.1
+        missileNumber = 0.2
         enemyNumber = 0.3
         
         lastTouch = touchLocation
@@ -716,8 +716,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
     if state == .FSGameStateStarting && hard.containsPoint(touchLocation){
         state = .FSGameStatePlaying
         backGroundMusic.play()
-        missileNumber = 0.1
-        enemyNumber = 0.05
+        missileNumber = 0.2
+        enemyNumber = 0.15
         
         lastTouch = touchLocation
         pause.hidden = false
