@@ -31,6 +31,8 @@ import SpriteKit
 import iAd
 import AVFoundation
 import Darwin
+import Social
+
 // Math Helpers
 extension Float {
   static func clamp(min: CGFloat, max: CGFloat, value: CGFloat) -> CGFloat {
@@ -72,6 +74,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
     
     var options: SKSpriteNode!
     var restart: SKSpriteNode!
+    var share: SKSpriteNode!
     var soundON: SKSpriteNode!
     var soundOFF: SKSpriteNode!
     var close: SKSpriteNode!
@@ -402,13 +405,16 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
     restart.position = CGPoint(x: CGRectGetMidX(frame), y: CGRectGetMidY(frame))
     restart.zPosition = 70
     initHighscore()
-  
-   
+    share = SKSpriteNode(imageNamed: "Share")
+    share.position = CGPoint(x: CGRectGetMidX(frame), y: CGRectGetMidY(frame) - restart.size.height*1.5)
+    share.zPosition = 70
+    addChild(share)
     addChild(restart)
     
     // 3
     label_score.position = CGPoint(x: CGRectGetMidX(frame), y: CGRectGetMaxY(frame) - 100)
     addChild(label_score)
+    
   }
     
   func restartGame() {
@@ -508,8 +514,59 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
     func pauseGame(){
         self.scene?.paused = true
     }
+//    
+//    func showTweetSheet() {
+//        let tweetSheet = SLComposeViewController(forServiceType: SLServiceTypeTwitter)
+//        tweetSheet.completionHandler = {
+//            result in
+//            switch result {
+//            case SLComposeViewControllerResult.Cancelled:
+//                //Add code to deal with it being cancelled
+//                break
+//                
+//            case SLComposeViewControllerResult.Done:
+//                //Add code here to deal with it being completed
+//                //Remember that dimissing the view is done for you, and sending the tweet to social media is automatic too. You could use this to give in game rewards?
+//                break
+//            }
+//        }
+//        
+//        tweetSheet.setInitialText("Test Twitter") //The default text in the tweet
+//        tweetSheet.addImage(UIImage(named: "TestImage.png")) //Add an image if you like?
+//        tweetSheet.addURL(NSURL(string: "http://twitter.com")) //A url which takes you into safari if tapped on
+//        var vc = self.view?.window?.rootViewController
+//        
+//        vc?.presentViewController(tweetSheet, animated: false, completion: nil)
+//    }
     
-  
+    func shareTextImageAndURL(#sharingText: String?, sharingImage: UIImage?, sharingURL: NSURL?) {
+        var sharingItems = [AnyObject]()
+        
+        if let text = sharingText {
+            sharingItems.append(text)
+        }
+        if let image = sharingImage {
+            sharingItems.append(image)
+        }
+        if let url = sharingURL {
+            sharingItems.append(url)
+        }
+        var vc = self.view?.window?.rootViewController
+        let activityViewController = UIActivityViewController(activityItems: sharingItems, applicationActivities: nil)
+        activityViewController.excludedActivityTypes = [
+            UIActivityTypePostToWeibo,
+            UIActivityTypePrint,
+            UIActivityTypeAssignToContact,
+            UIActivityTypeSaveToCameraRoll,
+            UIActivityTypeAddToReadingList,
+            UIActivityTypePostToFlickr,
+            UIActivityTypePostToVimeo,
+            UIActivityTypePostToTencentWeibo,
+            UIActivityTypeCopyToPasteboard
+        ]
+        activityViewController.modalInPopover = true
+        vc?.presentViewController(activityViewController, animated: true, completion: nil)
+    }
     
   // MARK: - SKPhysicsContactDelegate
   func didBeginContact(contact: SKPhysicsContact) {
@@ -530,7 +587,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
                 node, stop in
                 node.removeFromParent();
             }
-            
+
         }
         
         firstBody.node?.removeFromParent()
@@ -818,15 +875,23 @@ class GameScene: SKScene, SKPhysicsContactDelegate, ADInterstitialAdDelegate {
         soundOFF.hidden = false
         addChild(soundOFF)
     }
-    
+    if state == .FSGameStateEnded && share.containsPoint(touchLocation){
+        UIGraphicsBeginImageContextWithOptions(self.view!.bounds.size, false, UIScreen.mainScreen().scale)
+        self.view!.drawViewHierarchyInRect(self.view!.bounds, afterScreenUpdates: true)
+        let image = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        shareTextImageAndURL(sharingText: "I just scored \(score) on Galaxy Fighters", sharingImage: image, sharingURL: nil)
+    }
     if state == .FSGameStateEnded && restart.containsPoint(touchLocation)
     {
         label_highscore.text = ""
         label_score.removeFromParent()
         restart.removeFromParent()
+        share.removeFromParent()
         self.restartGame()
     }
   }
+    
     func runGame(){
         initMissile()
         initEnemy()
